@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sip or Spit - Business Ideas</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <div id="idea-carousel" class="idea-carousel">
+            <div class="idea-card active">
+                <div class="idea-content">
+                    <h2>Loading Business Ideas...</h2>
+                </div>
+                <div class="interaction-overlay">
+                    <div class="vote-indicator left-vote">
+                        <i class="fas fa-times"></i>
+                        <span>Spit</span>
+                    </div>
+                    <div class="vote-indicator right-vote">
+                        <i class="fas fa-check"></i>
+                        <span>Sip</span>
+                    </div>
+                    <div class="swipe-progress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bottom-controls">
+            <div class="query-info">
+                <span>Daily Queries: </span>
+                <span id="queries-left">5</span>
+            </div>
+            <div class="interaction-buttons">
+                <button id="dislike-btn" class="dislike-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button id="like-btn" class="like-btn">
+                    <i class="fas fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
