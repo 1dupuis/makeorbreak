@@ -182,19 +182,44 @@ class SipOrSpitApp {
             throw new Error('API key is missing');
         }
     
-        const prompt = `You are an expert business idea generator. Create 5 unique, innovative business ideas that are concise and compelling. Follow these guidelines:
+        const prompt = `INNOVATIVE PRODUCT & STARTUP IDEAS GENERATOR
     
-    1. Each idea must be an original, market-ready concept
-    2. Write a clear, punchy 1-2 sentence description
-    3. Cover diverse industries: tech, sustainability, health, services, etc.
-    4. Focus on solving real-world problems
-    5. Highlight the unique value proposition
+    CORE OBJECTIVE:
+    Generate 5 unique, diverse product or startup concepts that are distinct from typical business ideas.
     
-    Format your response STRICTLY as a valid JSON array of strings, like this:
-    ["Idea 1 description here", "Idea 2 description here", ...]
+    CRITICAL GUIDELINES:
+    - Cover WIDE range of domains: physical products, digital platforms, hardware, software, services
+    - Solve tangible problems or create novel experiences
+    - Include clear value proposition
+    - Span various industries: consumer tech, wellness, sustainability, entertainment, productivity, education, lifestyle
     
-    Example format:
-    ["A blockchain platform that revolutionizes supply chain transparency by tracking ethical sourcing for consumer products.", "An AI-powered mental health app that provides personalized therapy recommendations and connects users with licensed professionals through machine learning."]`;
+    REQUIRED OUTPUT FORMAT:
+    Respond ONLY as a strict JSON array of strings. EACH IDEA MUST BE:
+    - 1-2 concise sentences
+    - Globally scalable concept
+    - Actionable and potentially fundable
+    - Use clear, engaging language
+    
+    FORBIDDEN CONCEPTS:
+    - No standard app or website ideas
+    - Avoid generic marketplace platforms
+    - No repetitive AI-assistant type products
+    
+    EXAMPLE FORMAT:
+    ["A modular smart home device that transforms into multiple tools using magnetic, interchangeable components, enabling users to customize a single purchase for various household needs.", "Biodegradable consumer electronics packaging that grows into plantable seed gardens, creating a zero-waste tech accessory lifecycle."]
+    
+    INNOVATION DOMAINS TO EXPLORE:
+    - Sustainable consumer products
+    - Hybrid physical-digital experiences
+    - Wellness and personal development tools
+    - Next-generation educational technologies
+    - Adaptive lifestyle solutions
+    - Emerging consumer interaction models
+    
+    ADDITIONAL CONSTRAINTS:
+    - Must be original
+    - Demonstrate clear market potential
+    - Suggest a novel technological or design approach`;
     
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.API_KEY}`, {
@@ -255,11 +280,7 @@ class SipOrSpitApp {
                 .slice(0, 5),
             // Last resort: use a default set of ideas
             () => [
-                "A sustainable fashion platform that uses AI to design clothes from recycled materials.",
-                "An online mental health platform connecting therapists with clients through personalized matching algorithms.",
-                "A smart home energy management system that uses IoT and machine learning to optimize power consumption.",
-                "A digital marketplace for local artisans to sell handcrafted goods with transparent supply chain tracking.",
-                "An augmented reality education app that turns learning into an immersive, interactive experience."
+                "Oops! Try again."
             ]
         ];
 
