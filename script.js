@@ -13,9 +13,10 @@ class MakeOrBreakApp {
         this.state = {
             ideas: [],           
             currentIndex: 0,     
-            dailyIdeasLimit: 5,  
+            dailyIdeasLimit: 15,  
             swipeThreshold: 150, // Reduced threshold for easier swiping
             isSwiping: false,
+            isFollowUpMode: false,
             touchData: {
                 startX: 0,
                 currentX: 0,
@@ -286,12 +287,13 @@ class MakeOrBreakApp {
         `;
     }
 
-    async fetchBusinessIdeas() {
+    async fetchBusinessIdeas(previousIdea = null) {
         if (!this.API_KEY) {
             throw new Error('API key is missing');
         }
     
-        const prompt = `INNOVATIVE PRODUCT & STARTUP IDEAS GENERATOR
+        // Construct prompt with optional previous idea context
+        const basePrompt = `INNOVATIVE PRODUCT & STARTUP IDEAS GENERATOR
     
     CORE OBJECTIVE:
     Generate 5 unique, diverse product or startup concepts that are distinct from typical business ideas.
@@ -300,7 +302,25 @@ class MakeOrBreakApp {
     - Cover WIDE range of domains: physical products, digital platforms, hardware, software, services
     - Solve tangible problems or create novel experiences
     - Include clear value proposition
-    - Span various industries: consumer tech, wellness, sustainability, entertainment, productivity, education, lifestyle
+    - Span various industries: consumer tech, wellness, sustainability, entertainment, productivity, education, lifestyle`;
+
+        // Modify prompt if follow-up mode is active
+        let followUpContext = '';
+        if (previousIdea) {
+            followUpContext = `
+    
+    FOLLOW-UP CONTEXT:
+    The previous idea was: "${previousIdea}"
+    
+    ADDITIONAL CONSTRAINTS:
+    - Generate ideas that are either:
+      a) Directly related and expanding on the previous concept
+      b) Solving adjacant problems in the same domain
+      c) Offering a complementary innovation
+    - Demonstrate how the new idea builds upon or enhances the previous concept`;
+        }
+    
+        const promptSuffix = `
     
     REQUIRED OUTPUT FORMAT:
     Respond ONLY as a strict JSON array of strings. EACH IDEA MUST BE:
@@ -312,30 +332,16 @@ class MakeOrBreakApp {
     FORBIDDEN CONCEPTS:
     - No standard app or website ideas
     - Avoid generic marketplace platforms
-    - No repetitive AI-assistant type products
+    - No repetitive AI-assistant type products`;
     
-    EXAMPLE FORMAT:
-    ["A modular smart home device that transforms into multiple tools using magnetic, interchangeable components, enabling users to customize a single purchase for various household needs.", "Biodegradable consumer electronics packaging that grows into plantable seed gardens, creating a zero-waste tech accessory lifecycle."]
-    
-    INNOVATION DOMAINS TO EXPLORE:
-    - Sustainable consumer products
-    - Hybrid physical-digital experiences
-    - Wellness and personal development tools
-    - Next-generation educational technologies
-    - Adaptive lifestyle solutions
-    - Emerging consumer interaction models
-    
-    ADDITIONAL CONSTRAINTS:
-    - Must be original
-    - Demonstrate clear market potential
-    - Suggest a novel technological or design approach`;
+        const fullPrompt = basePrompt + followUpContext + promptSuffix;
     
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
+                    contents: [{ parts: [{ text: fullPrompt }] }]
                 })
             });
     
@@ -357,6 +363,7 @@ class MakeOrBreakApp {
             this.state.ideas = ideas;
             this.state.dailyIdeasLimit = Math.max(0, this.state.dailyIdeasLimit - 1);
             this.state.currentIndex = 0;
+            this.state.isFollowUpMode = !!previousIdea;
     
             // Update UI
             if (this.queriesLeftEl) {
@@ -420,9 +427,15 @@ class MakeOrBreakApp {
 
         const ideaCard = document.createElement('div');
         ideaCard.classList.add('idea-card', 'active');
+        
+        // Add special styling for follow-up mode
+        if (this.state.isFollowUpMode) {
+            ideaCard.classList.add('follow-up-idea');
+        }
+
         ideaCard.innerHTML = `
             <div class="idea-content">
-                <h2>Make or Break?</h2>
+                <h2>${this.state.isFollowUpMode ? 'Follow-up Idea' : 'Make or Break?'}</h2>
                 <p>${this.sanitizeHTML(idea)}</p>
             </div>
             <div class="interaction-overlay">
@@ -452,6 +465,9 @@ class MakeOrBreakApp {
     handleStart(e) {
         if (!this.ideaCarousel) return;
 
+        // Prevent multiple simultaneous touch events
+        if (this.state.isSwiping) return;
+
         // Normalize event coordinates
         const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
         const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
@@ -469,6 +485,7 @@ class MakeOrBreakApp {
         const activeCard = this.ideaCarousel.querySelector('.idea-card');
         if (activeCard) {
             activeCard.style.transition = 'none';
+            activeCard.style.willChange = 'transform'; // Performance optimization
         }
 
         // Prevent default to stop scrolling and text selection
@@ -488,34 +505,48 @@ class MakeOrBreakApp {
 
         // Prevent vertical scrolling during horizontal swipe
         const verticalDiff = Math.abs(clientY - this.state.touchData.startY);
-        if (verticalDiff > 30) {
+        const horizontalDiff = clientX - this.state.touchData.startX;
+
+        // More precise swipe detection
+        if (verticalDiff > Math.abs(horizontalDiff) && verticalDiff > 20) {
             this.state.isSwiping = false;
             return;
         }
 
         // Update touch data
         this.state.touchData.currentX = clientX;
-        const diffX = this.state.touchData.currentX - this.state.touchData.startX;
 
-        // Transform card with rotation
-        activeCard.style.transform = `translateX(${diffX}px) rotate(${diffX / 15}deg)`;
+        // Smooth rotation and translation
+        const maxRotation = 15; // Maximum rotation angle
+        const rotationFactor = 0.2; // Control rotation intensity
+        const rotation = Math.min(
+            maxRotation, 
+            Math.max(-maxRotation, horizontalDiff * rotationFactor)
+        );
 
-        // Show vote indicators
+        // Apply transform with improved smoothing
+        activeCard.style.transform = `
+            translateX(${horizontalDiff}px) 
+            rotate(${rotation}deg)
+        `;
+
+        // Enhanced vote indicators
         const leftIndicator = activeCard.querySelector('.left-vote');
         const rightIndicator = activeCard.querySelector('.right-vote');
+        const swipeThreshold = 100; // Increased threshold for clearer intent
 
-        // Update vote indicators
-        if (Math.abs(diffX) > 50) {
-            if (diffX < 0) {
-                leftIndicator.classList.add('active');
-                rightIndicator.classList.remove('active');
-            } else {
-                rightIndicator.classList.add('active');
-                leftIndicator.classList.remove('active');
-            }
+        // Dynamic opacity for indicators
+        const indicatorOpacity = Math.min(1, Math.abs(horizontalDiff) / swipeThreshold);
+        
+        if (horizontalDiff < -swipeThreshold) {
+            leftIndicator.style.opacity = indicatorOpacity;
+            rightIndicator.style.opacity = 0;
+        } else if (horizontalDiff > swipeThreshold) {
+            rightIndicator.style.opacity = indicatorOpacity;
+            leftIndicator.style.opacity = 0;
         } else {
-            leftIndicator.classList.remove('active');
-            rightIndicator.classList.remove('active');
+            leftIndicator.style.opacity = 0;
+            rightIndicator.style.opacity = 0;
         }
 
         // Prevent default to stop scrolling
@@ -529,29 +560,37 @@ class MakeOrBreakApp {
         const activeCard = this.ideaCarousel.querySelector('.idea-card');
         if (!activeCard) return;
 
-        // Calculate swipe details
-        const diffX = this.state.touchData.currentX - this.state.touchData.startX;
-        const timeDiff = Date.now() - this.state.touchData.startTime;
-        const swipeVelocity = Math.abs(diffX / timeDiff);
-
         // Reset styles
-        activeCard.style.transform = '';
+        activeCard.style.willChange = 'auto';
         activeCard.style.transition = 'transform 0.3s ease';
 
+        // Calculate swipe details
+        const horizontalDiff = this.state.touchData.currentX - this.state.touchData.startX;
+        const timeDiff = Date.now() - this.state.touchData.startTime;
+        const swipeVelocity = Math.abs(horizontalDiff / timeDiff);
+
+        const swipeThreshold = 150; // Consistent with existing code
+        const fastSwipeVelocity = 0.5; // Velocity threshold for fast swipe
+
+        // Determine vote based on swipe distance and velocity
+        const isFastSwipe = swipeVelocity > fastSwipeVelocity;
+        const isLongSwipe = Math.abs(horizontalDiff) > swipeThreshold;
+
+        if (isFastSwipe || isLongSwipe) {
+            // Determine vote direction
+            const isLike = horizontalDiff > 0;
+            this.processVote(isLike);
+        } else {
+            // Snap back to original position
+            activeCard.style.transform = 'translateX(0) rotate(0)';
+        }
+
+        // Reset indicators
         const leftIndicator = activeCard.querySelector('.left-vote');
         const rightIndicator = activeCard.querySelector('.right-vote');
         
-        if (leftIndicator) leftIndicator.classList.remove('active');
-        if (rightIndicator) rightIndicator.classList.remove('active');
-
-        // Determine vote based on swipe distance and velocity
-        const isSwipeSufficient = 
-            Math.abs(diffX) > this.state.swipeThreshold || 
-            swipeVelocity > 0.5;
-
-        if (isSwipeSufficient) {
-            this.processVote(diffX > 0);
-        }
+        if (leftIndicator) leftIndicator.style.opacity = 0;
+        if (rightIndicator) rightIndicator.style.opacity = 0;
 
         this.state.isSwiping = false;
     }
@@ -583,13 +622,22 @@ class MakeOrBreakApp {
         // Add vote indication
         const voteIndicator = document.createElement('div');
         voteIndicator.classList.add('vote-result');
-        voteIndicator.textContent = isLike ? 'MAKE ✓' : 'BREAK ✗';
+        
+        // Follow-up interaction logic
+        if (isLike) {
+            // Prompt to generate follow-up ideas
+            this.promptFollowUpIdea(currentIdea);
+            voteIndicator.textContent = 'EXPLORE ➜';
+        } else {
+            voteIndicator.textContent = 'BREAK ✗';
+        }
+        
         voteIndicator.style.cssText = `
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(${rotationDirection * 15}deg);
-            font-size: 4rem;
+            font-size: 3rem;
             font-weight: bold;
             color: ${isLike ? 'green' : 'red'};
             opacity: 0.7;
@@ -603,28 +651,99 @@ class MakeOrBreakApp {
             voteIndicator.remove();
         }, 1000);
     
-        // Wait for animation to complete before moving to next idea
+        // Wait for animation to complete before moving to next steps
         setTimeout(() => {
-            // Move to next idea
-            this.state.currentIndex++;
+            // If not a 'Like' vote, move to next idea
+            if (!isLike) {
+                this.state.currentIndex++;
     
+                // Check if we need more ideas
+                if (this.state.currentIndex >= this.state.ideas.length) {
+                    this.loadOrFetchIdeas();
+                    return;
+                }
+    
+                // Render next idea
+                this.renderIdeas();
+            }
+        }, 500);
+    }
+    
+    promptFollowUpIdea(currentIdea) {
+        // Create follow-up modal
+        const followUpModal = document.createElement('div');
+        followUpModal.classList.add('follow-up-modal');
+        followUpModal.innerHTML = `
+            <div class="follow-up-content">
+                <h2>Explore This Idea Further?</h2>
+                <p>${this.sanitizeHTML(currentIdea)}</p>
+                <div class="follow-up-actions">
+                    <button id="generate-follow-up" class="btn-primary">Generate Related Ideas</button>
+                    <button id="close-follow-up" class="btn-secondary">Close</button>
+                </div>
+            </div>
+        `;
+
+        // Add to body
+        document.body.appendChild(followUpModal);
+
+        // Add event listeners
+        const generateBtn = followUpModal.querySelector('#generate-follow-up');
+        const closeBtn = followUpModal.querySelector('#close-follow-up');
+
+        generateBtn.addEventListener('click', async () => {
+            // Remove modal
+            followUpModal.remove();
+
+            // Show loading state
+            this.showLoadingState();
+
+            try {
+                // Fetch follow-up ideas based on current idea
+                await this.fetchBusinessIdeas(currentIdea);
+            } catch (error) {
+                this.handleFetchError(error);
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            // Remove modal
+            followUpModal.remove();
+
+            // Move to next idea on 'close'
+            this.state.currentIndex++;
+
             // Check if we need more ideas
             if (this.state.currentIndex >= this.state.ideas.length) {
                 this.loadOrFetchIdeas();
                 return;
             }
-    
+
             // Render next idea
             this.renderIdeas();
-        }, 500);
+        });
+    }
+    
+    showLoadingState() {
+        if (!this.ideaCarousel) return;
+
+        this.ideaCarousel.innerHTML = `
+            <div class="idea-card active loading-state">
+                <div class="idea-content">
+                    <h2>Generating Follow-up Ideas...</h2>
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        `;
     }
 
-    saveVoteToHistory(idea, isLike) {
+    saveVoteToHistory(idea, isLike, followUp = false) {
         try {
             const voteHistory = JSON.parse(localStorage.getItem('voteHistory') || '[]');
             voteHistory.push({
                 idea: idea,
                 vote: isLike ? 'Make' : 'Break',
+                followUp: followUp,
                 timestamp: new Date().toISOString()
             });
             localStorage.setItem('voteHistory', JSON.stringify(voteHistory));
