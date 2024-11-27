@@ -13,7 +13,7 @@ class MakeOrBreakApp {
         this.state = {
             ideas: [],           
             currentIndex: 0,     
-            dailyIdeasLimit: 5,  
+            dailyIdeasLimit: 10,  
             swipeThreshold: 150, // Reduced threshold for easier swiping
             isSwiping: false,
             touchData: {
