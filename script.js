@@ -312,7 +312,7 @@ class MakeOrBreakApp {
         ideaCard.classList.add('idea-card', 'active');
         ideaCard.innerHTML = `
             <div class="idea-content">
-                <h2>Business Idea</h2>
+                <h2>Make or Break?</h2>
                 <p>${this.sanitizeHTML(idea)}</p>
             </div>
             <div class="interaction-overlay">
@@ -449,21 +449,64 @@ class MakeOrBreakApp {
     processVote(isLike) {
         const currentIdea = this.state.ideas[this.state.currentIndex];
         if (!currentIdea) return;
-
+    
         // Track votes
         this.saveVoteToHistory(currentIdea, isLike);
-
-        // Move to next idea
-        this.state.currentIndex++;
-
-        // Check if we need more ideas
-        if (this.state.currentIndex >= this.state.ideas.length) {
-            this.loadOrFetchIdeas();
-            return;
-        }
-
-        // Render next idea
-        this.renderIdeas();
+    
+        // Get the active card
+        const activeCard = this.ideaCarousel.querySelector('.idea-card');
+        if (!activeCard) return;
+    
+        // Determine animation direction and intensity
+        const rotationDirection = isLike ? 1 : -1;
+        const exitTransform = `
+            translateX(${rotationDirection * 150}%) 
+            rotate(${rotationDirection * 45}deg) 
+            scale(0.8)
+        `;
+    
+        // Apply exit animation
+        activeCard.style.transition = 'transform 0.5s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.5s ease';
+        activeCard.style.transform = exitTransform;
+        activeCard.style.opacity = '0';
+    
+        // Add vote indication
+        const voteIndicator = document.createElement('div');
+        voteIndicator.classList.add('vote-result');
+        voteIndicator.textContent = isLike ? 'MAKE ✓' : 'BREAK ✗';
+        voteIndicator.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(${rotationDirection * 15}deg);
+            font-size: 4rem;
+            font-weight: bold;
+            color: ${isLike ? 'green' : 'red'};
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 10;
+        `;
+        this.ideaCarousel.appendChild(voteIndicator);
+    
+        // Remove vote indicator after animation
+        setTimeout(() => {
+            voteIndicator.remove();
+        }, 1000);
+    
+        // Wait for animation to complete before moving to next idea
+        setTimeout(() => {
+            // Move to next idea
+            this.state.currentIndex++;
+    
+            // Check if we need more ideas
+            if (this.state.currentIndex >= this.state.ideas.length) {
+                this.loadOrFetchIdeas();
+                return;
+            }
+    
+            // Render next idea
+            this.renderIdeas();
+        }, 500);
     }
 
     saveVoteToHistory(idea, isLike) {
