@@ -300,15 +300,15 @@ class MakeOrBreakApp {
     loadAppState() {
         const today = new Date().toISOString().split('T')[0];
         const storedState = this.getSavedState();
-
+    
         // Reset state if not from today
         if (storedState.date !== today) {
-            this.state.dailyIdeasLimit = 5;
+            this.state.dailyIdeasLimit = 15;  // Changed from 5 to 15
             this.state.ideas = [];
         } else {
             this.state = { ...this.state, ...storedState, currentIndex: 0 };
         }
-
+    
         // Update UI
         if (this.queriesLeftEl) {
             this.queriesLeftEl.textContent = this.state.dailyIdeasLimit;
@@ -375,7 +375,7 @@ class MakeOrBreakApp {
     Generate 5 unique, diverse product or startup concepts that are distinct from typical business ideas.
     
     CRITICAL GUIDELINES:
-    - Cover WIDE range of domains: physical products, digital platforms, hardware, software, services
+    - Cover WIDE range of domains: physical products, digital platforms, hardware, software, services, etc...
     - Solve tangible problems or create novel experiences
     - Include clear value proposition
     - Span various industries: consumer tech, wellness, sustainability, entertainment, productivity, education, lifestyle`;
@@ -411,14 +411,12 @@ class MakeOrBreakApp {
     REQUIRED OUTPUT FORMAT:
     Respond ONLY as a strict JSON array of strings. EACH IDEA MUST BE:
     - 1-2 concise sentences
-    - Globally scalable concept
     - Actionable and potentially fundable
     - Use clear, engaging language
     
     FORBIDDEN CONCEPTS:
     - No standard app or website ideas
-    - Avoid generic marketplace platforms
-    - No repetitive AI-assistant type products`;
+    - Avoid generic marketplace platforms`;
     
         const fullPrompt = basePrompt + followUpContext + promptSuffix;
     
