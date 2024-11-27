@@ -1,4 +1,4 @@
-class SipOrSpitApp {
+class MakeOrBreakApp {
     constructor() {
         // Secure API key handling
         this.API_KEY = 'AIzaSyDZm9VpvHeGrS5YSYvZqTaL3q7tiXyH9dc';
@@ -14,12 +14,13 @@ class SipOrSpitApp {
             ideas: [],           
             currentIndex: 0,     
             dailyIdeasLimit: 5,  
-            swipeThreshold: 250, 
+            swipeThreshold: 150, // Reduced threshold for easier swiping
             isSwiping: false,
             touchData: {
                 startX: 0,
                 currentX: 0,
-                startY: 0
+                startY: 0,
+                startTime: 0
             }
         };
 
@@ -50,7 +51,6 @@ class SipOrSpitApp {
         ];
         
         methodsToBind.forEach(method => {
-            // Only bind methods that actually exist on the prototype
             if (typeof this[method] === 'function') {
                 this[method] = this[method].bind(this);
             } else {
@@ -66,7 +66,7 @@ class SipOrSpitApp {
     }
 
     setupEventListeners() {
-        // Clear existing listeners to prevent duplicates
+        // Remove existing listeners to prevent duplicates
         this.removeExistingListeners();
 
         // Setup button handlers
@@ -77,12 +77,11 @@ class SipOrSpitApp {
             this.likeBtn.addEventListener('click', () => this.processVote(true));
         }
 
-        // Touch and mouse event handlers
+        // Enhanced touch and mouse event handlers
         this.addTouchHandlers();
     }
 
     removeExistingListeners() {
-        // Remove all potential existing event listeners
         const events = [
             { element: this.ideaCarousel, events: ['touchstart', 'mousedown'] },
             { element: document, events: ['touchmove', 'mousemove', 'touchend', 'mouseup'] }
@@ -102,7 +101,7 @@ class SipOrSpitApp {
     addTouchHandlers() {
         if (!this.ideaCarousel) return;
 
-        // Add touch and mouse events with passive option for performance
+        // Add touch and mouse events with improved compatibility
         this.ideaCarousel.addEventListener('touchstart', this.handleStart, { passive: false });
         this.ideaCarousel.addEventListener('mousedown', this.handleStart);
         document.addEventListener('touchmove', this.handleMove, { passive: false });
@@ -343,19 +342,26 @@ class SipOrSpitApp {
     handleStart(e) {
         if (!this.ideaCarousel) return;
 
+        // Normalize event coordinates
         const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
         const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
 
         this.state.touchData = {
             startX: clientX,
             currentX: clientX,
-            startY: clientY
+            startY: clientY,
+            startTime: Date.now()
         };
 
         this.state.isSwiping = true;
-        document.body.style.cursor = 'grabbing';
 
-        // Prevent default to stop scrolling
+        // Visual feedback
+        const activeCard = this.ideaCarousel.querySelector('.idea-card');
+        if (activeCard) {
+            activeCard.style.transition = 'none';
+        }
+
+        // Prevent default to stop scrolling and text selection
         e.preventDefault();
     }
 
@@ -366,31 +372,40 @@ class SipOrSpitApp {
         const activeCard = this.ideaCarousel.querySelector('.idea-card');
         if (!activeCard) return;
 
+        // Normalize event coordinates
         const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
         const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
 
         // Prevent vertical scrolling during horizontal swipe
-        if (Math.abs(clientY - this.state.touchData.startY) > 20) {
+        const verticalDiff = Math.abs(clientY - this.state.touchData.startY);
+        if (verticalDiff > 30) {
             this.state.isSwiping = false;
             return;
         }
 
+        // Update touch data
         this.state.touchData.currentX = clientX;
         const diffX = this.state.touchData.currentX - this.state.touchData.startX;
 
-        // Transform card
-        activeCard.style.transform = `translateX(${diffX}px) rotate(${diffX / 10}deg)`;
+        // Transform card with rotation
+        activeCard.style.transform = `translateX(${diffX}px) rotate(${diffX / 15}deg)`;
 
         // Show vote indicators
         const leftIndicator = activeCard.querySelector('.left-vote');
         const rightIndicator = activeCard.querySelector('.right-vote');
 
-        if (diffX < 0) {
-            leftIndicator.classList.add('active');
-            rightIndicator.classList.remove('active');
+        // Update vote indicators
+        if (Math.abs(diffX) > 50) {
+            if (diffX < 0) {
+                leftIndicator.classList.add('active');
+                rightIndicator.classList.remove('active');
+            } else {
+                rightIndicator.classList.add('active');
+                leftIndicator.classList.remove('active');
+            }
         } else {
-            rightIndicator.classList.add('active');
             leftIndicator.classList.remove('active');
+            rightIndicator.classList.remove('active');
         }
 
         // Prevent default to stop scrolling
@@ -404,11 +419,14 @@ class SipOrSpitApp {
         const activeCard = this.ideaCarousel.querySelector('.idea-card');
         if (!activeCard) return;
 
+        // Calculate swipe details
         const diffX = this.state.touchData.currentX - this.state.touchData.startX;
+        const timeDiff = Date.now() - this.state.touchData.startTime;
+        const swipeVelocity = Math.abs(diffX / timeDiff);
 
         // Reset styles
         activeCard.style.transform = '';
-        document.body.style.cursor = 'default';
+        activeCard.style.transition = 'transform 0.3s ease';
 
         const leftIndicator = activeCard.querySelector('.left-vote');
         const rightIndicator = activeCard.querySelector('.right-vote');
@@ -416,8 +434,12 @@ class SipOrSpitApp {
         if (leftIndicator) leftIndicator.classList.remove('active');
         if (rightIndicator) rightIndicator.classList.remove('active');
 
-        // Determine vote based on swipe
-        if (Math.abs(diffX) > this.state.swipeThreshold) {
+        // Determine vote based on swipe distance and velocity
+        const isSwipeSufficient = 
+            Math.abs(diffX) > this.state.swipeThreshold || 
+            swipeVelocity > 0.5;
+
+        if (isSwipeSufficient) {
             this.processVote(diffX > 0);
         }
 
@@ -499,9 +521,9 @@ class SipOrSpitApp {
 // App initialization with error handling
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        const sipOrSpitApp = new SipOrSpitApp();
+        const makeOrBreakApp = new MakeOrBreakApp();
     } catch (error) {
-        console.error('Failed to initialize SipOrSpitApp:', error);
+        console.error('Failed to initialize MakeOrBreakApp:', error);
         const errorContainer = document.createElement('div');
         errorContainer.innerHTML = `
             <div class="error-message">
