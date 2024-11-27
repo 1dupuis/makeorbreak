@@ -29,10 +29,15 @@ class MakeOrBreakApp {
         this.libraryModal = this.safeGetElement('library-modal');
         this.libraryContent = this.safeGetElement('library-content');
         this.closeLibraryBtn = this.safeGetElement('close-library-btn');
+        
+        this.followUpSection = this.safeGetElement('follow-up-section');
+        this.followUpInput = this.safeGetElement('follow-up-input');
+        this.followUpSubmit = this.safeGetElement('follow-up-submit');
 
         // Add library-related method bindings
         this.bindMethods();
         this.setupLibraryEventListeners();
+        this.setupFollowUpEventListeners();
 
         // Bind methods to ensure correct context
         this.bindMethods();
@@ -66,6 +71,11 @@ class MakeOrBreakApp {
             'deleteLibraryItem'
         ];
         
+        const followUpMethodsToBind = [
+            'handleFollowUpSubmit',
+            'toggleFollowUpSection'
+        ];
+        
         methodsToBind.forEach(method => {
             if (typeof this[method] === 'function') {
                 this[method] = this[method].bind(this);
@@ -81,12 +91,78 @@ class MakeOrBreakApp {
                 console.warn(`Method ${method} does not exist and cannot be bound`);
             }
         });
+        
+        followUpMethodsToBind.forEach(method => {
+            if (typeof this[method] === 'function') {
+                this[method] = this[method].bind(this);
+            } else {
+                console.warn(`Method ${method} does not exist and cannot be bound`);
+            }
+        });
     }
     
     initializeApp() {
         this.loadAppState();
         this.setupEventListeners();
         this.loadOrFetchIdeas();
+    }
+    
+    setupFollowUpEventListeners() {
+        if (this.followUpSubmit) {
+            this.followUpSubmit.addEventListener('click', this.handleFollowUpSubmit);
+        }
+
+        if (this.followUpInput) {
+            // Allow submission with Enter key
+            this.followUpInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.handleFollowUpSubmit();
+                }
+            });
+        }
+    }
+    
+    async handleFollowUpSubmit() {
+        if (!this.followUpInput || !this.followUpSection) return;
+
+        const followUpText = this.followUpInput.value.trim();
+        
+        // Validate input
+        if (!followUpText) {
+            this.showFollowUpError('Please enter a follow-up idea or context.');
+            return;
+        }
+
+        // Get the current idea for context
+        const currentIdea = this.state.ideas[this.state.currentIndex];
+        if (!currentIdea) {
+            this.showFollowUpError('No current idea to generate follow-ups for.');
+            return;
+        }
+
+        try {
+            // Clear input and show loading state
+            this.followUpInput.value = '';
+            this.toggleFollowUpSection('loading');
+
+            // Construct a more specific prompt for follow-up
+            const fullFollowUpContext = `
+            ORIGINAL IDEA: ${currentIdea}
+            
+            FOLLOW-UP CONTEXT FROM USER: ${followUpText}
+            
+            GENERATE REFINED/RELATED BUSINESS IDEAS BASED ON THE ABOVE CONTEXT`;
+
+            // Use existing fetchBusinessIdeas method with modified prompt
+            await this.fetchBusinessIdeas(currentIdea, fullFollowUpContext);
+
+            // Reset follow-up section
+            this.toggleFollowUpSection('hide');
+        } catch (error) {
+            console.error('Follow-up idea generation error:', error);
+            this.showFollowUpError('Failed to generate follow-up ideas. Please try again.');
+        }
     }
     
     setupLibraryEventListeners() {
@@ -287,12 +363,12 @@ class MakeOrBreakApp {
         `;
     }
 
-    async fetchBusinessIdeas(previousIdea = null) {
+    async fetchBusinessIdeas(previousIdea = null, customContext = null) {
         if (!this.API_KEY) {
             throw new Error('API key is missing');
         }
     
-        // Construct prompt with optional previous idea context
+        // Construct prompt with optional previous idea context and custom context
         const basePrompt = `INNOVATIVE PRODUCT & STARTUP IDEAS GENERATOR
     
     CORE OBJECTIVE:
@@ -318,6 +394,16 @@ class MakeOrBreakApp {
       b) Solving adjacant problems in the same domain
       c) Offering a complementary innovation
     - Demonstrate how the new idea builds upon or enhances the previous concept`;
+        }
+    
+        // Add custom context if provided (overrides default follow-up context)
+        if (customContext) {
+            followUpContext = `
+    
+    ADVANCED FOLLOW-UP CONTEXT:
+    ${customContext}
+    
+    USE THE ABOVE CONTEXT TO GENERATE HIGHLY TARGETED AND SPECIFIC BUSINESS IDEAS`;
         }
     
         const promptSuffix = `
@@ -363,7 +449,7 @@ class MakeOrBreakApp {
             this.state.ideas = ideas;
             this.state.dailyIdeasLimit = Math.max(0, this.state.dailyIdeasLimit - 1);
             this.state.currentIndex = 0;
-            this.state.isFollowUpMode = !!previousIdea;
+            this.state.isFollowUpMode = true;
     
             // Update UI
             if (this.queriesLeftEl) {
@@ -376,6 +462,53 @@ class MakeOrBreakApp {
             console.error('Fetch error:', error);
             throw error;
         }
+    }
+    
+    // New method to manage follow-up section visibility and state
+    toggleFollowUpSection(state = 'toggle') {
+        if (!this.followUpSection) return;
+
+        switch(state) {
+            case 'show':
+                this.followUpSection.classList.add('active');
+                this.followUpInput.focus();
+                break;
+            case 'hide':
+                this.followUpSection.classList.remove('active');
+                break;
+            case 'loading':
+                this.followUpSection.classList.add('loading');
+                this.followUpInput.disabled = true;
+                this.followUpSubmit.disabled = true;
+                break;
+            case 'error':
+                this.followUpSection.classList.add('error');
+                break;
+            default: // toggle
+                this.followUpSection.classList.toggle('active');
+        }
+    }
+    
+    showFollowUpError(message) {
+        if (!this.followUpSection) return;
+
+        // Create error message element
+        const errorEl = document.createElement('div');
+        errorEl.classList.add('follow-up-error');
+        errorEl.textContent = message;
+
+        // Add to follow-up section
+        this.followUpSection.appendChild(errorEl);
+
+        // Remove error after 3 seconds
+        setTimeout(() => {
+            if (errorEl.parentNode) {
+                errorEl.parentNode.removeChild(errorEl);
+            }
+            this.toggleFollowUpSection('hide');
+            this.followUpInput.disabled = false;
+            this.followUpSubmit.disabled = false;
+        }, 3000);
     }
 
     parseIdeas(responseText) {
@@ -666,6 +799,12 @@ class MakeOrBreakApp {
                 // Render next idea
                 this.renderIdeas();
             }
+            if (isLike) {
+            // Add a slight delay to allow for modal animation
+            setTimeout(() => {
+                this.toggleFollowUpSection('show');
+            }, 600);
+          }
         }, 500);
     }
     
