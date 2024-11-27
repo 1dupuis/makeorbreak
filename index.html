@@ -34,12 +34,30 @@
                 <span id="queries-left">5</span>
             </div>
             <div class="interaction-buttons">
+                <button id="library-btn" class="library-btn">
+                    <i class="fas fa-archive"></i>
+                </button>
                 <button id="dislike-btn" class="dislike-btn">
                     <i class="fas fa-times"></i>
                 </button>
                 <button id="like-btn" class="like-btn">
                     <i class="fas fa-check"></i>
                 </button>
+            </div>
+        </div>
+
+        <!-- Library Modal -->
+        <div id="library-modal" class="library-modal">
+            <div class="library-modal-content">
+                <div class="library-header">
+                    <h2>My Business Ideas</h2>
+                    <button id="close-library-btn" class="close-library-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="library-content" class="library-content">
+                    <!-- Library items will be dynamically populated here -->
+                </div>
             </div>
         </div>
     </div>
