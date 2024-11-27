@@ -23,6 +23,15 @@ class MakeOrBreakApp {
                 startTime: 0
             }
         };
+        
+        this.libraryBtn = this.safeGetElement('library-btn');
+        this.libraryModal = this.safeGetElement('library-modal');
+        this.libraryContent = this.safeGetElement('library-content');
+        this.closeLibraryBtn = this.safeGetElement('close-library-btn');
+
+        // Add library-related method bindings
+        this.bindMethods();
+        this.setupLibraryEventListeners();
 
         // Bind methods to ensure correct context
         this.bindMethods();
@@ -50,7 +59,21 @@ class MakeOrBreakApp {
             'loadOrFetchIdeas'
         ];
         
+        const libraryMethodsToBind = [
+            'openLibrary',
+            'closeLibrary',
+            'deleteLibraryItem'
+        ];
+        
         methodsToBind.forEach(method => {
+            if (typeof this[method] === 'function') {
+                this[method] = this[method].bind(this);
+            } else {
+                console.warn(`Method ${method} does not exist and cannot be bound`);
+            }
+        });
+        
+        libraryMethodsToBind.forEach(method => {
             if (typeof this[method] === 'function') {
                 this[method] = this[method].bind(this);
             } else {
@@ -63,6 +86,15 @@ class MakeOrBreakApp {
         this.loadAppState();
         this.setupEventListeners();
         this.loadOrFetchIdeas();
+    }
+    
+    setupLibraryEventListeners() {
+        if (this.libraryBtn) {
+            this.libraryBtn.addEventListener('click', this.openLibrary);
+        }
+        if (this.closeLibraryBtn) {
+            this.closeLibraryBtn.addEventListener('click', this.closeLibrary);
+        }
     }
 
     setupEventListeners() {
@@ -79,6 +111,84 @@ class MakeOrBreakApp {
 
         // Enhanced touch and mouse event handlers
         this.addTouchHandlers();
+    }
+    
+    openLibrary() {
+        if (!this.libraryModal || !this.libraryContent) return;
+
+        // Retrieve vote history
+        const voteHistory = this.getVoteHistory();
+
+        // Filter and group 'Make' ideas
+        const makeIdeas = voteHistory.filter(item => item.vote === 'Make');
+
+        // Clear previous content
+        this.libraryContent.innerHTML = '';
+
+        if (makeIdeas.length === 0) {
+            this.libraryContent.innerHTML = `
+                <div class="empty-library">
+                    <p>Your library is empty. Start exploring ideas to save them!</p>
+                </div>
+            `;
+        } else {
+            // Create library items
+            makeIdeas.forEach((item, index) => {
+                const libraryItem = document.createElement('div');
+                libraryItem.classList.add('library-item');
+                libraryItem.innerHTML = `
+                    <div class="library-item-content">
+                        <p>${this.sanitizeHTML(item.idea)}</p>
+                        <div class="library-item-meta">
+                            <span>${new Date(item.timestamp).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <button class="delete-library-item" data-index="${index}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                // Add event listener for delete button
+                const deleteBtn = libraryItem.querySelector('.delete-library-item');
+                deleteBtn.addEventListener('click', () => this.deleteLibraryItem(index));
+
+                this.libraryContent.appendChild(libraryItem);
+            });
+        }
+
+        // Show the library modal
+        this.libraryModal.classList.add('open');
+    }
+    
+    closeLibrary() {
+        if (!this.libraryModal) return;
+        this.libraryModal.classList.remove('open');
+    }
+    
+    deleteLibraryItem(index) {
+        try {
+            const voteHistory = this.getVoteHistory();
+            
+            // Remove the specific 'Make' idea
+            const makeIdeas = voteHistory.filter(item => item.vote === 'Make');
+            const ideaToRemove = makeIdeas[index];
+            
+            // Find and remove the exact item from full vote history
+            const fullHistoryIndex = voteHistory.findIndex(
+                item => item.idea === ideaToRemove.idea && 
+                        item.timestamp === ideaToRemove.timestamp
+            );
+            
+            if (fullHistoryIndex !== -1) {
+                voteHistory.splice(fullHistoryIndex, 1);
+                localStorage.setItem('voteHistory', JSON.stringify(voteHistory));
+                
+                // Refresh library view
+                this.openLibrary();
+            }
+        } catch (error) {
+            console.error('Error deleting library item:', error);
+        }
     }
 
     removeExistingListeners() {
@@ -520,6 +630,15 @@ class MakeOrBreakApp {
             localStorage.setItem('voteHistory', JSON.stringify(voteHistory));
         } catch (error) {
             console.error('Error saving vote history:', error);
+        }
+    }
+    
+    getVoteHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('voteHistory') || '[]');
+        } catch (error) {
+            console.error('Error retrieving vote history:', error);
+            return [];
         }
     }
 
