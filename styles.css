@@ -76,6 +76,111 @@ html, body {
     overscroll-behavior: contain;
 }
 
+/* Library Button Styling */
+.bottom-controls .library-btn {
+    background-color: #6a5acd;
+    color: white;
+    margin-right: 10px;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Library Modal Styling */
+.library-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.library-modal.open {
+    display: flex;
+}
+
+.library-modal-content {
+    background-color: white;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 70%;
+    overflow-y: auto;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.library-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.close-library-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #888;
+    cursor: pointer;
+}
+
+.library-content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.library-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f4f4f4;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.library-item-content {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.library-item-meta {
+    color: #666;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+.delete-library-item {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.empty-library {
+    text-align: center;
+    color: #888;
+    padding: 20px;
+}
+
 .idea-card {
     position: absolute;
     width: 100%;
@@ -126,7 +231,7 @@ html, body {
 }
 
 .idea-content::before {
-    content: 'Swipe Left Or Right!';
+    content: 'Swipe Left/Right';
     position: absolute;
     top: 15px;
     left: 50%;
