@@ -319,11 +319,11 @@ class SipOrSpitApp {
             <div class="interaction-overlay">
                 <div class="vote-indicator left-vote">
                     <i class="fas fa-times"></i>
-                    <span>Spit</span>
+                    <span>Break</span>
                 </div>
                 <div class="vote-indicator right-vote">
                     <i class="fas fa-check"></i>
-                    <span>Sip</span>
+                    <span>Make</span>
                 </div>
                 <div class="swipe-progress"></div>
             </div>
@@ -449,7 +449,7 @@ class SipOrSpitApp {
             const voteHistory = JSON.parse(localStorage.getItem('voteHistory') || '[]');
             voteHistory.push({
                 idea: idea,
-                vote: isLike ? 'sip' : 'spit',
+                vote: isLike ? 'Make' : 'Break',
                 timestamp: new Date().toISOString()
             });
             localStorage.setItem('voteHistory', JSON.stringify(voteHistory));
