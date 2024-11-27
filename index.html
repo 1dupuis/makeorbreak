@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Make or Break</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Make or Break: Business Idea Evaluator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-container">
@@ -31,7 +32,7 @@
         <div class="bottom-controls">
             <div class="query-info">
                 <span>Daily Queries: </span>
-                <span id="queries-left">5</span>
+                <span id="queries-left">15</span>
             </div>
             <div class="interaction-buttons">
                 <button id="library-btn" class="library-btn">
@@ -46,7 +47,15 @@
             </div>
         </div>
 
-        <!-- Library Modal -->
+        <div id="follow-up-section" class="follow-up-section">
+            <div class="follow-up-content">
+                <textarea id="follow-up-input" placeholder="Elaborate on this idea or explore a related concept..." rows="3"></textarea>
+                <button id="follow-up-submit" class="follow-up-submit">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
         <div id="library-modal" class="library-modal">
             <div class="library-modal-content">
                 <div class="library-header">
